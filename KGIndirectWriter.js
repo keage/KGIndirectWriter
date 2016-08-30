@@ -10939,7 +10939,7 @@ KGIndirectWriter.autoTrackingForAA = (node) => {
 	for (let childNode of node.childNodes) {
 		if (childNode.nodeType === node.ELEMENT_NODE) {
 		
-			if (KGIndirectWriter.excludedTags.indexOf(childNode.tagName) !== -1) {
+			if (KGIndirectWriter.excludedTags.indexOf(childNode.tagName) === -1) {
 				const element = childNode.cloneNode(false)
 				element.innerHTML = ""
 				element.innerHTML = KGIndirectWriter.autoTrackingForAA(childNode)
@@ -11022,7 +11022,7 @@ KGIndirectWriter.process = (selectors) => {
 		const elementList = document.querySelectorAll(selectors)
 		
 		for (let element of elementList) {
-			if (KGIndirectWriter.excludedTags.indexOf(element.tagName) !== -1) {
+			if (KGIndirectWriter.excludedTags.indexOf(element.tagName) === -1) {
 				setTimeout(() => { element.innerHTML = KGIndirectWriter.autoTrackingForAA(element) }, 0)
 			}
 		}
