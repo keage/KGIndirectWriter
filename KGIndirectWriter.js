@@ -1,19 +1,16 @@
 /**
- * @class KGIndirectWriter
- * @version 0.0.1 (2016/08/29)
- * 
- * AA のズレが発生する文字の letter-spacing をよしなに調整
- * DirectWrite 環境で発動
- *
+ * @file DirectWrite 環境で AA のズレが発生する文字の letter-spacing をよしなに調整
+ 
  * @author YAMASINA Keage, keage.tokyo
+ * @version 0.0.2
  */
 
 
 var KGIndirectWriter = {}
 
 /**
- * 処理から除外するl HTML タグ
- * @type {Array} KGIndirectWriter.excludedTags
+ * 処理から除外する HTML タグ
+ * @return {Array} KGIndirectWriter.excludedTags
  */
 KGIndirectWriter.excludedTags = ["SCRIPT", "STYLE", "TITLE"]
 
@@ -40,7 +37,6 @@ KGIndirectWriter.adjustLetterSpacing = (string) => {
 		return `${previousString}${text}`
 	}, "")
 }
-
 
 /**
  * @type {Object} KGIndirectWriter.trackingTable
@@ -10943,7 +10939,7 @@ KGIndirectWriter.autoTrackingForAA = (node) => {
 	for (let childNode of node.childNodes) {
 		if (childNode.nodeType === node.ELEMENT_NODE) {
 		
-			if (!KGIndirectWriter.excludedTags.includes(childNode.tagName)) {
+			if (KGIndirectWriter.excludedTags.indexOf(childNode.tagName) !== -1) {
 				const element = childNode.cloneNode(false)
 				element.innerHTML = ""
 				element.innerHTML = KGIndirectWriter.autoTrackingForAA(childNode)
@@ -10964,7 +10960,7 @@ KGIndirectWriter.autoTrackingForAA = (node) => {
 
 /**
  * 表示領域外に文字幅計測用の span 要素と、それらを格納する div 要素を生成
- * "!" と "p" の横幅で DirectWrite 環境か否か判定
+ * "!" と ";" の横幅で DirectWrite 環境か否か判定
  * 
  * @return {Boolean} directWriteIsEnabled DirectWrite 環境ならtrue
  */
@@ -10976,9 +10972,9 @@ KGIndirectWriter.isDirectWriteEnabled = () => {
 			id : "__kg-exclamation__",
 			width : 3.5
 		},
-		"p" : {
-			id : "__kg-p__",
-			width : 7.9375
+		";" : {
+			id : "__kg-semicolon__",
+			width : 3.25
 		}
 	}
 
@@ -11014,7 +11010,6 @@ KGIndirectWriter.isDirectWriteEnabled = () => {
 	return directWriteIsEnabled
 }
 
-
 /*
  * ここから開始
  * AA の存在する要素を CSS 形式で指定
@@ -11027,8 +11022,8 @@ KGIndirectWriter.process = (selectors) => {
 		const elementList = document.querySelectorAll(selectors)
 		
 		for (let element of elementList) {
-			if (!KGIndirectWriter.excludedTags.includes(element.tagName)) {
-				element.innerHTML = KGIndirectWriter.autoTrackingForAA(element)
+			if (KGIndirectWriter.excludedTags.indexOf(element.tagName) !== -1) {
+				setTimeout(() => { element.innerHTML = KGIndirectWriter.autoTrackingForAA(element) }, 0)
 			}
 		}
 		
