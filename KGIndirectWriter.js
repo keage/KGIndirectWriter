@@ -1,8 +1,13 @@
+// ==ClosureCompiler==
+// @output_file_name default.js
+// @compilation_level SIMPLE_OPTIMIZATIONS
+// ==/ClosureCompiler==
+
 /**
  * @file DirectWrite 環境で AA のズレが発生する文字の letter-spacing をよしなに調整
  
  * @author YAMASINA Keage, keage.tokyo
- * @version 0.0.2
+ * @version 0.0.4
  */
 
 
@@ -20,22 +25,24 @@ KGIndirectWriter.excludedTags = ["SCRIPT", "STYLE", "TITLE"]
  * span を挿入した HTML を返却
  * 
  * @param {String} string - autoTrackingForAA から渡されたテキストノード内の文字列
- * @type {String} text - 生成した文字列
  * @return {String}
  */
 KGIndirectWriter.adjustLetterSpacing = (string) => {
-	return Array.from(string.replace(/ +/g," ")).reduce((previousString, currentChar) => {
-		let text = ""
+	return Array.from(string.replace(/ +/g," ")).reduce((element, currentChar) => {
 		const char = currentChar.charCodeAt()
+		const d = document
 
 		if (typeof KGIndirectWriter.trackingTable[char] !== "undefined") {
-			text = `<span style="letter-spacing:${KGIndirectWriter.trackingTable[char]}px;">${currentChar}</span>`
+			const span = d.createElement("span")
+			span.appendChild(d.createTextNode(currentChar))
+			span.setAttribute("style", `letter-spacing:${KGIndirectWriter.trackingTable[char]}px;`)
+			element.appendChild(span)
 		} else {
-			text = currentChar
+			element.appendChild(d.createTextNode(currentChar))
 		}
 	
-		return `${previousString}${text}`
-	}, "")
+		return element
+	}, document.createDocumentFragment())
 }
 
 /**
@@ -10934,7 +10941,7 @@ KGIndirectWriter.trackingTable = {
  * @return {String} html
 */ 
 KGIndirectWriter.autoTrackingForAA = (node) => {
-	let html = ""
+	let html = document.createDocumentFragment()
 	
 	for (let childNode of node.childNodes) {
 		if (childNode.nodeType === node.ELEMENT_NODE) {
@@ -10942,21 +10949,21 @@ KGIndirectWriter.autoTrackingForAA = (node) => {
 			if (KGIndirectWriter.excludedTags.indexOf(childNode.tagName) === -1) {
 				const element = childNode.cloneNode(false)
 				element.innerHTML = ""
-				element.innerHTML = KGIndirectWriter.autoTrackingForAA(childNode)
-				html += element.outerHTML
+				element.appendChild(KGIndirectWriter.autoTrackingForAA(childNode))
+				html.appendChild(element)
 			} else {
-				html += childNode.outerHTML
+				html.appendChild(childNode)
 			}
 			
 		} else if (childNode.nodeType === node.TEXT_NODE) {
-			html += KGIndirectWriter.adjustLetterSpacing(childNode.nodeValue)
+			html.appendChild(KGIndirectWriter.adjustLetterSpacing(childNode.nodeValue))
 		} else {
-			html += childNode.nodeValue
+			html.appendChild(childNode)
 		} 
 	}
-	
 	return html
 }
+
 
 /**
  * 表示領域外に文字幅計測用の span 要素と、それらを格納する div 要素を生成
@@ -11020,12 +11027,17 @@ KGIndirectWriter.isDirectWriteEnabled = () => {
 KGIndirectWriter.process = (selectors) => {
 	if (KGIndirectWriter.isDirectWriteEnabled()) {
 		const elementList = document.querySelectorAll(selectors)
-		
+		const bodyStyle = document.getElementsByTagName("body")[0].style
 		for (let element of elementList) {
 			if (KGIndirectWriter.excludedTags.indexOf(element.tagName) === -1) {
-				setTimeout(() => { element.innerHTML = KGIndirectWriter.autoTrackingForAA(element) }, 0)
+				setTimeout(() => { 
+					let clone = element.cloneNode(true)
+					while (element.firstChild) {
+						element.removeChild(element.firstChild)
+					}
+					element.appendChild(KGIndirectWriter.autoTrackingForAA(clone))
+				}, 0)
 			}
 		}
-		
 	}
 }
