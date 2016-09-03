@@ -46,6 +46,117 @@ KGIndirectWriter.adjustLetterSpacing = (string) => {
 }
 
 /**
+ * 渡されたノードから
+ * 1. 要素ノードは再帰的に読み込む (KGIndirectWriter.excludedTags に記述された要素は 3. と同様の処理)
+ * 2. テキストノードは adjustLetterSpacing に処理を渡し HTML を生成
+ * 3. それ以外は素通し
+ * 上記 2., 3. で生成された HTML を返す
+ * 
+ * @param {HTMLElement} node
+ * @return {String} html
+*/ 
+KGIndirectWriter.autoTrackingForAA = (node) => {
+	let html = document.createDocumentFragment()
+	
+	for (let childNode of node.childNodes) {
+		if (childNode.nodeType === node.ELEMENT_NODE) {
+		
+			if (KGIndirectWriter.excludedTags.indexOf(childNode.tagName) === -1) {
+				const element = childNode.cloneNode(false)
+				element.innerHTML = ""
+				element.appendChild(KGIndirectWriter.autoTrackingForAA(childNode))
+				html.appendChild(element)
+			} else {
+				html.appendChild(childNode)
+			}
+			
+		} else if (childNode.nodeType === node.TEXT_NODE) {
+			html.appendChild(KGIndirectWriter.adjustLetterSpacing(childNode.nodeValue))
+		} else {
+			html.appendChild(childNode)
+		} 
+	}
+	return html
+}
+
+/**
+ * 表示領域外に文字幅計測用の span 要素と、それらを格納する div 要素を生成
+ * "!" と ";" の横幅で DirectWrite 環境か否か判定
+ * 
+ * @return {Boolean} directWriteIsEnabled DirectWrite 環境ならtrue
+ */
+KGIndirectWriter.isDirectWriteEnabled = () => {
+	let directWriteIsEnabled = false
+	const d = document, div = d.createElement("div")
+	const glyphs = {
+		"!" : {
+			id : "__kg-exclamation__",
+			width : 3.5
+		},
+		";" : {
+			id : "__kg-semicolon__",
+			width : 3.25
+		}
+	}
+
+	/**
+	 * span 要素の生成
+	 * 
+	 * @param {String} char
+	 * @param {String} id
+	 * @return {HTMLSpanElement} span
+	 */
+	const createSpan = (char, id) => {
+		const span = d.createElement("span")
+		span.style.cssText = "font-family:'ＭＳ Ｐゴシック','MS Pゴシック','MS PGothic','ＭＳＰゴシック','MSPゴシック';font-size:16px;"
+		span.innerHTML = char
+		span.setAttribute("id", id)
+		
+		return span
+	}
+	
+	div.style.cssText = "position:absolute;top:-9999px;left:-9999px;width:300px;height:300px;line-height:normal;margin:0;padding:0;"
+	div.setAttribute("id", "__kg-div__")
+	  
+	Object.keys(glyphs).map((char) => { div.appendChild(createSpan(char, glyphs[char].id)) })
+    
+	d.getElementsByTagName("body")[0].appendChild(div)
+	
+	if (Object.keys(glyphs).every(char => d.getElementById(glyphs[char].id).getBoundingClientRect().width === glyphs[char].width )) {
+		directWriteIsEnabled = true
+	}
+
+	div.parentNode.removeChild(div)
+
+	return directWriteIsEnabled
+}
+
+/*
+ * ここから開始
+ * AA の存在する要素を CSS 形式で指定
+ * @example KGIndirectWriter.process(".aa");
+ * 
+ * @param {string} selectors KGIndirectWriter で処理したい要素の CSS セレクタ
+*/
+KGIndirectWriter.process = (selectors) => {
+	if (KGIndirectWriter.isDirectWriteEnabled()) {
+		const elementList = document.querySelectorAll(selectors)
+		const bodyStyle = document.getElementsByTagName("body")[0].style
+		for (let element of elementList) {
+			if (KGIndirectWriter.excludedTags.indexOf(element.tagName) === -1) {
+				setTimeout(() => { 
+					let clone = element.cloneNode(true)
+					while (element.firstChild) {
+						element.removeChild(element.firstChild)
+					}
+					element.appendChild(KGIndirectWriter.autoTrackingForAA(clone))
+				}, 0)
+			}
+		}
+	}
+}
+
+/**
  * @type {Object} KGIndirectWriter.trackingTable
  * 左：10 進 Unicode
  * 右：非 DirectWrite 環境と DirectWrite 環境での 16px MS Pゴシックの横幅の差分 [px]
@@ -10931,113 +11042,83 @@ KGIndirectWriter.trackingTable = {
 }
 
 /**
- * 渡されたノードから
- * 1. 要素ノードは再帰的に読み込む (KGIndirectWriter.excludedTags に記述された要素は 3. と同様の処理)
- * 2. テキストノードは adjustLetterSpacing に処理を渡し HTML を生成
- * 3. それ以外は素通し
- * 上記 2., 3. で生成された HTML を返す
- * 
- * @param {HTMLElement} node
- * @return {String} html
-*/ 
-KGIndirectWriter.autoTrackingForAA = (node) => {
-	let html = document.createDocumentFragment()
-	
-	for (let childNode of node.childNodes) {
-		if (childNode.nodeType === node.ELEMENT_NODE) {
-		
-			if (KGIndirectWriter.excludedTags.indexOf(childNode.tagName) === -1) {
-				const element = childNode.cloneNode(false)
-				element.innerHTML = ""
-				element.appendChild(KGIndirectWriter.autoTrackingForAA(childNode))
-				html.appendChild(element)
-			} else {
-				html.appendChild(childNode)
-			}
-			
-		} else if (childNode.nodeType === node.TEXT_NODE) {
-			html.appendChild(KGIndirectWriter.adjustLetterSpacing(childNode.nodeValue))
-		} else {
-			html.appendChild(childNode)
-		} 
-	}
-	return html
-}
-
-
-/**
- * 表示領域外に文字幅計測用の span 要素と、それらを格納する div 要素を生成
- * "!" と ";" の横幅で DirectWrite 環境か否か判定
- * 
- * @return {Boolean} directWriteIsEnabled DirectWrite 環境ならtrue
+ * Array.from の polyfill
  */
-KGIndirectWriter.isDirectWriteEnabled = () => {
-	let directWriteIsEnabled = false
-	const d = document, div = d.createElement("div")
-	const glyphs = {
-		"!" : {
-			id : "__kg-exclamation__",
-			width : 3.5
-		},
-		";" : {
-			id : "__kg-semicolon__",
-			width : 3.25
-		}
-	}
+// Production steps of ECMA-262, Edition 6, 22.1.2.1
+// Reference: https://people.mozilla.org/~jorendorff/es6-draft.html#sec-array.from
+if (!Array.from) {
+  Array.from = (function () {
+    var toStr = Object.prototype.toString;
+    var isCallable = function (fn) {
+      return typeof fn === 'function' || toStr.call(fn) === '[object Function]';
+    };
+    var toInteger = function (value) {
+      var number = Number(value);
+      if (isNaN(number)) { return 0; }
+      if (number === 0 || !isFinite(number)) { return number; }
+      return (number > 0 ? 1 : -1) * Math.floor(Math.abs(number));
+    };
+    var maxSafeInteger = Math.pow(2, 53) - 1;
+    var toLength = function (value) {
+      var len = toInteger(value);
+      return Math.min(Math.max(len, 0), maxSafeInteger);
+    };
 
-	/**
-	 * span 要素の生成
-	 * 
-	 * @param {String} char
-	 * @param {String} id
-	 * @return {HTMLSpanElement} span
-	 */
-	const createSpan = (char, id) => {
-		const span = d.createElement("span")
-		span.style.cssText = "font-family:'ＭＳ Ｐゴシック','MS Pゴシック','MS PGothic','ＭＳＰゴシック','MSPゴシック';font-size:16px;"
-		span.innerHTML = char
-		span.setAttribute("id", id)
-		
-		return span
-	}
-	
-	div.style.cssText = "position:absolute;top:-9999px;left:-9999px;width:300px;height:300px;line-height:normal;margin:0;padding:0;"
-	div.setAttribute("id", "__kg-div__")
-	  
-	Object.keys(glyphs).map((char) => { div.appendChild(createSpan(char, glyphs[char].id)) })
-    
-	d.getElementsByTagName("body")[0].appendChild(div)
-	
-	if (Object.keys(glyphs).every(char => d.getElementById(glyphs[char].id).getBoundingClientRect().width === glyphs[char].width )) {
-		directWriteIsEnabled = true
-	}
+    // The length property of the from method is 1.
+    return function from(arrayLike/*, mapFn, thisArg */) {
+      // 1. Let C be the this value.
+      var C = this;
 
-	div.parentNode.removeChild(div)
+      // 2. Let items be ToObject(arrayLike).
+      var items = Object(arrayLike);
 
-	return directWriteIsEnabled
-}
+      // 3. ReturnIfAbrupt(items).
+      if (arrayLike == null) {
+        throw new TypeError("Array.from requires an array-like object - not null or undefined");
+      }
 
-/*
- * ここから開始
- * AA の存在する要素を CSS 形式で指定
- * @example KGIndirectWriter.process(".aa");
- * 
- * @param {string} selectors KGIndirectWriter で処理したい要素の CSS セレクタ
-*/
-KGIndirectWriter.process = (selectors) => {
-	if (KGIndirectWriter.isDirectWriteEnabled()) {
-		const elementList = document.querySelectorAll(selectors)
-		const bodyStyle = document.getElementsByTagName("body")[0].style
-		for (let element of elementList) {
-			if (KGIndirectWriter.excludedTags.indexOf(element.tagName) === -1) {
-				setTimeout(() => { 
-					let clone = element.cloneNode(true)
-					while (element.firstChild) {
-						element.removeChild(element.firstChild)
-					}
-					element.appendChild(KGIndirectWriter.autoTrackingForAA(clone))
-				}, 0)
-			}
-		}
-	}
+      // 4. If mapfn is undefined, then let mapping be false.
+      var mapFn = arguments.length > 1 ? arguments[1] : void undefined;
+      var T;
+      if (typeof mapFn !== 'undefined') {
+        // 5. else      
+        // 5. a If IsCallable(mapfn) is false, throw a TypeError exception.
+        if (!isCallable(mapFn)) {
+          throw new TypeError('Array.from: when provided, the second argument must be a function');
+        }
+
+        // 5. b. If thisArg was supplied, let T be thisArg; else let T be undefined.
+        if (arguments.length > 2) {
+          T = arguments[2];
+        }
+      }
+
+      // 10. Let lenValue be Get(items, "length").
+      // 11. Let len be ToLength(lenValue).
+      var len = toLength(items.length);
+
+      // 13. If IsConstructor(C) is true, then
+      // 13. a. Let A be the result of calling the [[Construct]] internal method of C with an argument list containing the single item len.
+      // 14. a. Else, Let A be ArrayCreate(len).
+      var A = isCallable(C) ? Object(new C(len)) : new Array(len);
+
+      // 16. Let k be 0.
+      var k = 0;
+      // 17. Repeat, while k < len… (also steps a - h)
+      var kValue;
+      while (k < len) {
+        kValue = items[k];
+        if (mapFn) {
+          A[k] = typeof T === 'undefined' ? mapFn(kValue, k) : mapFn.call(T, kValue, k);
+        } else {
+          A[k] = kValue;
+        }
+        k += 1;
+      }
+      // 18. Let putStatus be Put(A, "length", len, true).
+      A.length = len;
+      // 20. Return A.
+      return A;
+    };
+  }());
 }
