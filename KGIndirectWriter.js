@@ -1,13 +1,8 @@
-// ==ClosureCompiler==
-// @output_file_name default.js
-// @compilation_level SIMPLE_OPTIMIZATIONS
-// ==/ClosureCompiler==
-
 /**
  * @file DirectWrite 環境で AA のズレが発生する文字の letter-spacing をよしなに調整
  
  * @author YAMASINA Keage, keage.tokyo
- * @version 0.0.4
+ * @version 0.0.5
  */
 
 
