@@ -2,7 +2,7 @@
  * @file DirectWrite 環境で AA のズレが発生する文字の letter-spacing をよしなに調整
  
  * @author YAMASINA Keage, keage.tokyo
- * @version 0.0.5
+ * @version 0.0.6
  */
 
 
@@ -139,13 +139,13 @@ KGIndirectWriter.process = (selectors) => {
 		const bodyStyle = document.getElementsByTagName("body")[0].style
 		for (let element of elementList) {
 			if (KGIndirectWriter.excludedTags.indexOf(element.tagName) === -1) {
-				setTimeout(() => { 
+				requestAnimationFrame(() => { 
 					let clone = element.cloneNode(true)
 					while (element.firstChild) {
 						element.removeChild(element.firstChild)
 					}
 					element.appendChild(KGIndirectWriter.autoTrackingForAA(clone))
-				}, 0)
+				})
 			}
 		}
 	}
