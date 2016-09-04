@@ -17,7 +17,9 @@ DirectWrite 環境のブラウザで発生する AA のズレを調整するス�
 
 ## 使い方
 
-KGIndirectWriter.min.js をダウンロード & 自サイトにアップロードし、以下のコードをブログテンプレの head 末尾か body 末尾に追加
+KGIndirectWriter.min.js をダウンロード & 自サイトにアップロードし、以下のコードをブログテンプレの<s> head 末尾か</s> body 末尾に追加
+
+_2016/09/04 追記： head 末尾へのスクリプト追加はエラーが発生しましたので body 末尾への追加でお願いします。_
 
 ````
 <script src="[アップロード先の URL]"></script>
