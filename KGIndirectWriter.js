@@ -2,7 +2,7 @@
  * @file DirectWrite 環境で AA のズレが発生する文字の letter-spacing をよしなに調整
  
  * @author YAMASINA Keage, keage.tokyo
- * @version 0.0.6
+ * @version 0.0.7
  */
 
 
@@ -58,7 +58,10 @@ KGIndirectWriter.autoTrackingForAA = (node) => {
 		
 			if (KGIndirectWriter.excludedTags.indexOf(childNode.tagName) === -1) {
 				const element = childNode.cloneNode(false)
-				element.innerHTML = ""
+
+				while (element.firstChild) {
+					element.removeChild(element.firstChild)
+				}
 				element.appendChild(KGIndirectWriter.autoTrackingForAA(childNode))
 				html.appendChild(element)
 			} else {
@@ -103,10 +106,11 @@ KGIndirectWriter.isDirectWriteEnabled = () => {
 	 */
 	const createSpan = (char, id) => {
 		const span = d.createElement("span")
+
 		span.style.cssText = "font-family:'ＭＳ Ｐゴシック','MS Pゴシック','MS PGothic','ＭＳＰゴシック','MSPゴシック';font-size:16px;"
-		span.innerHTML = char
 		span.setAttribute("id", id)
-		
+		span.appendChild(d.createTextNode(char))
+			
 		return span
 	}
 	
@@ -135,12 +139,15 @@ KGIndirectWriter.isDirectWriteEnabled = () => {
 */
 KGIndirectWriter.process = (selectors) => {
 	if (KGIndirectWriter.isDirectWriteEnabled()) {
-		const elementList = document.querySelectorAll(selectors)
-		const bodyStyle = document.getElementsByTagName("body")[0].style
+		const d = document
+		const elementList = d.querySelectorAll(selectors)
+		const bodyStyle = d.getElementsByTagName("body")[0].style
+
 		for (let element of elementList) {
 			if (KGIndirectWriter.excludedTags.indexOf(element.tagName) === -1) {
 				requestAnimationFrame(() => { 
 					let clone = element.cloneNode(true)
+
 					while (element.firstChild) {
 						element.removeChild(element.firstChild)
 					}
